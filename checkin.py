@@ -1,5 +1,6 @@
 """网站浏览器适配层：通过原有页面操作并捕获响应，不自行绕过登录验证。"""
 import math
+import os
 import time
 from urllib.parse import urlsplit
 from playwright.sync_api import Error as PlaywrightError
@@ -33,7 +34,8 @@ def parse_response(status, data):
         raise LoginRequired("登录失效，请运行 login 重新登录。")
     if code == "already_signed" and status in (200, 400, 409):
         # 重复签到不能证明之前的模式或奖励是多少，未知信息用 None，不能填 0。
-        return {"status": "already_signed", "mode": None, "points_change": None, "balance": None}
+        return {"status": "already_signed", "mode": None, "points_change": None,
+                "balance": None, "multiplier": None}
     if status >= 500:
         raise UnknownResult("网站服务器异常，未确认签到结果。")
     if not 200 <= status < 300 or code not in (None, "ok"):
@@ -43,14 +45,19 @@ def parse_response(status, data):
     if not number(award) or not number(balance):
         raise UnknownResult("响应缺少积分结果，签到状态未知。")
     mode = data.get("mode")
+    multiplier = data.get("multiplier")
     return {"status": "success", "mode": mode if mode in ("normal", "lucky") else None,
-            "points_change": award, "balance": balance}
+            "points_change": award, "balance": balance,
+            "multiplier": multiplier if number(multiplier) else None}
 
 def interpret_response(status, data):
     result = parse_response(status, data)
     if result["status"] == "already_signed":
         return "今日已签到，无需重复操作。"
-    return f"签到成功：本次 {result['points_change']:+g} 积分，当前余额 {result['balance']:g}。"
+    text = f"签到成功：本次 {result['points_change']:+g} 积分，当前余额 {result['balance']:g}。"
+    if result["multiplier"] is not None:
+        text += f" 倍率 {result['multiplier']:g}。"
+    return text
 
 def response_data(response):
     try:
@@ -152,8 +159,13 @@ def fetch_account(page, timeout_seconds):
         page.remove_listener("response", observe)
 
 def save_login(page, timeout_seconds):
-    """等待人工登录，以服务端返回的账户信息确认成功，不以页面跳转确认。"""
+    """从环境变量自动登录；未配置凭证时等待人工登录，以服务端账户确认。"""
+    email = os.environ.get("DIAN115_EMAIL", "")
+    password = os.environ.get("DIAN115_PASSWORD", "")
+    if bool(email) != bool(password):
+        raise ValueError("请同时设置 DIAN115_EMAIL 和 DIAN115_PASSWORD，或都留空使用手动登录。")
     verified = []
+    rejected = []
     def observe(response):
         if urlsplit(response.url).netloc != urlsplit(SITE).netloc:
             return
@@ -161,6 +173,8 @@ def save_login(page, timeout_seconds):
             "/api/portal/me", "/api/portal/auth/login", "/api/portal/auth/tg/widget"
         }:
             return
+        if urlsplit(response.url).path == "/api/portal/auth/login" and response.status in (400, 401):
+            rejected.append(True)
         try:
             verified.append(parse_account(response.status, response_data(response)))
         except CheckinError:
@@ -168,11 +182,25 @@ def save_login(page, timeout_seconds):
     page.on("response", observe)
     try:
         page.goto(SITE + "/login?redirect=/me/signin", wait_until="domcontentloaded")
-        print(f"请在浏览器中登录并完成验证，最长等待 {timeout_seconds} 秒。", flush=True)
         deadline = time.monotonic() + timeout_seconds
+        if email and password and not verified:
+            # 已登录的资料目录可能被页面直接跳转；这时不再输入密码。
+            while time.monotonic() < deadline and not verified:
+                field = page.locator('input[type="email"]')
+                if field.is_visible():
+                    field.fill(email)
+                    page.locator('input[type="password"]').fill(password)
+                    page.get_by_role("button", name="登录进入", exact=True).click()
+                    break
+                page.wait_for_timeout(250)
+            print("已尝试自动登录；若页面要求验证，请在浏览器中完成。", flush=True)
+        else:
+            print(f"请在浏览器中登录并完成验证，最长等待 {timeout_seconds} 秒。", flush=True)
         while time.monotonic() < deadline:
             if verified:
                 return verified[-1]
+            if rejected:
+                raise LoginRequired("网站拒绝账号密码登录，请检查 .env 中的凭证或在网页确认原因。")
             page.wait_for_timeout(250)
         raise LoginRequired("等待登录超时，未确认成功。")
     finally:
@@ -200,7 +228,7 @@ class Browser:
                     result = None
                     session_ready = False
                     try:
-                        # 人工重新登录不恢复备份 Cookie，也可用于修复损坏的备份。
+                        # 重新登录不恢复备份 Cookie，也可用于修复损坏的备份。
                         if operation != "login":
                             restore_cookies(context, cfg.profile / "session-cookies.json")
                         session_ready = True

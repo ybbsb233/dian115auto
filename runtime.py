@@ -84,9 +84,10 @@ class Engine:
                     except (OSError, ValueError):
                         # 网站结果和本地落盘是两件事：保存失败不能推翻已确认的签到。
                         result.update(record_saved=False, message="网站已确认签到，但本地记录保存失败，请检查数据目录。")
-                LOG.info("%s %s签到 %s 积分变化=%s 余额=%s 已保存=%s", day,
+                LOG.info("%s %s签到 %s 积分变化=%s 余额=%s 倍率=%s 已保存=%s", day,
                          "普通" if mode == "normal" else "运气", result["status"],
-                         result.get("points_change"), result.get("balance"), result["record_saved"])
+                         result.get("points_change"), result.get("balance"),
+                         result.get("multiplier"), result["record_saved"])
             else:
                 LOG.warning("%s 签到 %s：%s", day, result["status"], result.get("message", ""))
             return result

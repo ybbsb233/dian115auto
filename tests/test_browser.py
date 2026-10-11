@@ -3,12 +3,42 @@ import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from playwright.sync_api import sync_playwright
-from checkin import CheckinError, LoginRequired, SITE, perform_checkin, restore_cookies, parse_account, fetch_account
+from checkin import CheckinError, LoginRequired, SITE, perform_checkin, restore_cookies, parse_account, fetch_account, save_login
 from storage import atomic_json
 
 
 class BrowserFlowTests(unittest.TestCase):
+    def test_automatic_login_submits_env_credentials_and_confirms_account(self):
+        context = self.browser.new_context()
+        self.addCleanup(context.close)
+        submitted = []
+        html = '''<meta charset="utf-8"><input type="email"><input type="password"><button onclick="login()">登录进入</button>
+          <script>async function login(){await fetch('/api/portal/auth/login', {
+          method:'POST',body:JSON.stringify({email:document.querySelector('[type=email]').value,
+          password:document.querySelector('[type=password]').value})});}</script>'''
+        def respond(route):
+            if route.request.url.endswith('/api/portal/auth/login'):
+                submitted.append(json.loads(route.request.post_data))
+                route.fulfill(json={'user': {'id': 1, 'points': 179, 'nickname': 'fixture'}})
+            else:
+                route.fulfill(content_type='text/html', body=html)
+        context.route('**/*', respond)
+        with patch.dict(os.environ, {'DIAN115_EMAIL':'fixture@example.com','DIAN115_PASSWORD':'fixture-password'}):
+            result = save_login(context.new_page(), 5)
+        self.assertEqual(result['account_id'], '1')
+        self.assertEqual(submitted, [{'email':'fixture@example.com','password':'fixture-password'}])
+
+    def test_partial_login_credentials_rejected_before_navigation(self):
+        context = self.browser.new_context()
+        self.addCleanup(context.close)
+        page = context.new_page()
+        with patch.dict(os.environ, {'DIAN115_EMAIL':'fixture@example.com','DIAN115_PASSWORD':''}), \
+             self.assertRaises(ValueError):
+            save_login(page, 2)
+        self.assertEqual(page.url, 'about:blank')
+
     @classmethod
     def setUpClass(cls):
         cls.playwright = sync_playwright().start()

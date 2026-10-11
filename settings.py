@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import tomllib
 from zoneinfo import ZoneInfo
+from dotenv import load_dotenv
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,8 @@ class Settings:
 def load_settings(path):
     """相对路径以配置文件为基准；API 密钥从指定环境变量读取。"""
     path = Path(path).resolve()
+    # 系统环境变量优先；账号密码只保存在进程环境，不进入配置对象或日志。
+    load_dotenv(path.parent / ".env", override=False)
     with path.open("rb") as stream:
         raw = tomllib.load(stream)
     # 拒绝拼错的配置项，避免用户以为设置生效而实际使用了默认值。

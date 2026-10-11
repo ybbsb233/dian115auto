@@ -1,6 +1,6 @@
 # Dian115 自动签到
 
-为 [Dian115 资源网站](https://m.dian115.com)编写的 Python 自动签到工具。首次在浏览器中手动登录，之后每天按设定时间签到，输出积分结果并保存记录。
+为 [Dian115 资源网站](https://m.dian115.com)编写的 Python 自动签到工具。首次在浏览器中登录（支持自动填写账号密码），之后每天按设定时间签到，输出积分结果并保存记录。
 
 支持普通签到和运气签到、失败后的有限重试，以及可选的 HTTP API。适用于 Python 3.11+、Windows 和 Linux。这是第三方工具，需要自己的 Dian115 网站账号。
 
@@ -18,11 +18,20 @@ python -m venv .venv
 
 **1. 登录账号**
 
+复制 `.env.example` 为 `.env`，填写网站登录邮箱和密码：
+
+```dotenv
+DIAN115_EMAIL=你的登录邮箱
+DIAN115_PASSWORD=你的密码
+```
+
+`.env` 位于配置文件所在目录，已被 Git 忽略；系统环境变量优先。密码含 `#` 或空格时请用引号包住值。
+
 ```powershell
 .\.venv\Scripts\python.exe checkin.py login
 ```
 
-在弹出的浏览器中登录并完成网站验证。程序确认账号后会自动关闭浏览器并保存登录资料。
+程序会在弹出的浏览器中自动填写并提交账号密码。如果网站要求人机验证，仍需人工完成；两项凭证都未配置时使用手动登录。程序确认账号后自动关闭浏览器并保存登录资料，`login` 不签到。
 
 **2. 试运行一次**
 
@@ -61,7 +70,7 @@ mode = "normal" # normal 普通签到；lucky 运气签到
 
 | 命令 | 用途 |
 | --- | --- |
-| `login` | 手动登录，保存账号与浏览器资料 |
+| `login` | 自动或手动登录，保存账号与浏览器资料 |
 | `run` | 立即尝试一次签到，结果输出到终端 |
 | `serve` | 持续运行每日调度、记录日志，并提供本机 API |
 
@@ -80,17 +89,24 @@ mode = "normal" # normal 普通签到；lucky 运气签到
 
 ## Linux
 
-首次登录需要图形桌面或远程桌面；无桌面的 SSH 会话无法完成交互登录。
+提供安装和后台服务助手，完整步骤见 [Linux 部署指南](docs/linux.md)。建议 Ubuntu 24.04 或 Debian 12，使用普通 Linux 用户：
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m playwright install --with-deps chromium
-.venv/bin/python checkin.py login
-.venv/bin/python checkin.py serve
+sudo apt update
+sudo apt install -y git python3 python3-venv
+git clone https://github.com/ybbsb233/dian115auto.git
+cd dian115auto
+python3 deploy/linux.py setup
+cp .env.example .env
+chmod 600 .env
+nano .env                              # 填写网站邮箱和密码
+python3 deploy/linux.py login --display xvfb
+python3 deploy/linux.py install-service --display xvfb # 只安装，不启动
+sudo loginctl enable-linger "$USER"
+python3 deploy/linux.py start           # 启动每日签到，错过时间可能立即补签
 ```
 
-开机自启示例见 [deploy/dian115.service](deploy/dian115.service)，安装步骤见[使用与 API 参考](docs/usage.md#linux)。Linux 部署示例尚未在实际服务器验证。
+助手会安装 Xvfb 虚拟显示器，登录和服务都能在纯 SSH 中以有界面模式自动运行浏览器，无需完整桌面。网站要求人工验证时仍需远程桌面或 X11 转发。Linux 部署尚未在实际服务器验证。
 
 ## 更多说明
 
@@ -98,7 +114,7 @@ python3 -m venv .venv
 
 `.state/` 保存浏览器登录凭据，`data/` 保存账号信息与运行记录，均已被 Git 忽略。**不要上传或分享这些目录**；使用自定义目录时也应加入 `.gitignore`。
 
-网站变化、人机验证和登录过期可能影响运行。自动化测试使用模拟响应，不代表真实账号流程已验证；网站完整响应、登录有效期及北京时间日界线仍需实测。
+网站变化、人机验证和登录过期可能影响运行。2026-10-12 已在 Windows 实测运气签到，确认奖励、余额、倍率及当天日历记录；普通签到、登录有效期和每日调度仍需实测。
 
 ## 项目结构与测试
 

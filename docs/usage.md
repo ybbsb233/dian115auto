@@ -6,7 +6,7 @@ Python 3.11+，支持 Windows / Linux。通过网站正常浏览器流程工作�
 
 | 命令 | 行为 |
 |---|---|
-| `login` | 打开浏览器手动登录，保存登录资料及账号身份；不签到 |
+| `login` | 打开浏览器，从 `.env` 自动填写账号密码（未配置时手动登录），保存登录资料及账号身份；不签到 |
 | `run` | 不检查本地签到状态，直接尝试一次；结果输出到控制台，不写日志、不保存签到记录 |
 | `serve` | 提供 HTTP API 和每日调度；记录日志及已确认的签到结果 |
 
@@ -14,7 +14,7 @@ Python 3.11+，支持 Windows / Linux。通过网站正常浏览器流程工作�
 
 ## Windows 快速开始
 
-在项目目录执行：
+在目目目录执行：
 
 ```powershell
 python -m venv .venv
@@ -38,6 +38,8 @@ python -m venv .venv
 
 ## Linux
 
+推荐使用 [Linux 部署助手与完整指南](linux.md)，自动安装依赖并生成当前用户的后台服务。下面保留手动安装方式。
+
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
@@ -46,7 +48,7 @@ python3 -m venv .venv
 .venv/bin/python checkin.py serve
 ```
 
-安装系统浏览器依赖可能需要管理员权限。首次 `login` 需要 Linux 图形桌面或远程桌面，以便输入账号密码并处理验证；无桌面的 SSH 会话不能直接完成这个步骤。登录后服务默认使用无界面浏览器。不要假定 Windows 浏览器资料可以直接迁移到 Linux。
+安装系统浏览器依赖可能需要管理员权限。手动登录需要 Linux 图形桌面或远程桌面。推荐使用部署助手安装 Xvfb，再从 .env 自动登录；登录和后台服务均可在纯 SSH 中运行，详见 Linux 部署指南。网站要求人工验证时仍需可操作的桌面。不要假定 Windows 浏览器资料可以直接迁移到 Linux。
 
 `deploy/dian115.service` 提供 systemd 示例：按实际安装路径、Linux 用户修改后再安装。它负责开机启动和异常重启，每日时间由程序管理。示例只提供文件，不会自动安装或启动服务。
 
@@ -57,7 +59,7 @@ sudo systemctl enable --now dian115
 sudo systemctl status dian115
 ```
 
-示例中的 `dian115` 用户必须已存在，能读写项目的数据和浏览器目录，且 Chromium 应由同一用户安装。重新登录前 `sudo systemctl stop dian115`；登录后再启动。
+示例中的 `dian115` 用户必须已存在，能读写目目的数据和浏览器目录，且 Chromium 应由同一用户安装。重新登录前 `sudo systemctl stop dian115`；登录后再启动。
 
 ## 配置与调度
 
@@ -100,7 +102,7 @@ key_env = "DIAN115_API_KEY"
 
 ## HTTP API
 
-默认地址 `http://127.0.0.1:8080`。下面是**本项目自己的返回格式**，不是网站原始响应。
+默认地址 `http://127.0.0.1:8080`。下面是**本目目自己的返回格式**，不是网站原始响应。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -132,6 +134,7 @@ curl -X POST http://127.0.0.1:8080/checkin -H 'Content-Type: application/json' -
   "mode": "lucky",
   "requested_mode": "lucky",
   "points_change": 0,
+  "multiplier": 0,
   "balance": 175,
   "account_id": "123",
   "date": "2026-10-11",
@@ -141,7 +144,9 @@ curl -X POST http://127.0.0.1:8080/checkin -H 'Content-Type: application/json' -
 }
 ```
 
-`already_signed` 表示网站确认已签到；`mode`、积分变化及余额可能为 `null`，不能编造当天之前的奖励。`requested_mode` 仅表示本次尝试选择的模式。已有成功记录不会被之后的“已签到”或错误覆盖。
+`multiplier` 为网站返回的倍率（可能为 0 或负数）；缺失或无效时为 `null`，不从奖励积分推算。新保存的成功记录保留该字段，状态和历史接口可查询；旧记录可能没有此字段。
+
+`already_signed` 表示网站确认已签到；`mode`、积分变化、余额和倍率可能为 `null`，不能编造当天之前的奖励。`requested_mode` 仅表示本次尝试选择的模式。已有成功记录不会被之后的“已签到”或错误覆盖。
 
 `login_required`：网站身份失效；`busy`：浏览器或服务正在处理请求；`unknown`：结果未确认；`failed`：网站明确拒绝等错误。网站确认成功但磁盘写入失败时仍返回网站结果，同时 `record_saved=false`，日志记录保存失败。
 
@@ -170,7 +175,7 @@ data/checkins/<账号哈希>/      YYYY-MM-DD.json 确认记录、schedule.json 
 data/logs/service.log          常驻服务日志，自动轮转
 ```
 
-Cookie 等同于登录凭据，请勿上传或分享。项目 `.gitignore` 排除默认的浏览器资料、数据、日志和本地配置；自定义其他目录时自行排除。Linux 下敏感 JSON 通过临时文件以仅当前用户可读写的权限创建，再原子替换。
+Cookie 等同于登录凭据，请勿上传或分享。目目 `.gitignore` 排除默认的浏览器资料、数据、日志和本地配置；自定义其他目录时自行排除。Linux 下敏感 JSON 通过临时文件以仅当前用户可读写的权限创建，再原子替换。
 
 单次运行不保存签到记录，之后服务仍可能尝试一次，由网站的“今日已签到”响应补齐记录。浏览器与数据目录需要保留；换目录后本地无记录只能表示未知。日志仅由 `serve` 创建，`run` 和 `login` 不创建日志。
 
@@ -184,4 +189,4 @@ Cookie 等同于登录凭据，请勿上传或分享。项目 `.gitignore` 排�
 
 测试覆盖浏览器按钮、请求响应、0/负分、重复签到、本地记录隔离、并发、调度重试、HTTP 鉴权、单次模式无记录/无日志及会话 Cookie 恢复。接口测试使用模拟网站响应，不会操作真实账号。
 
-网站公开前端显示成功读取 `award`、`new_balance`，重复签到存在 `already_signed`，账户从 `/api/portal/me` 的 `user` 读取。本项目按此实现，**尚未使用你的账号验证完整真实响应、登录有效期及网站日界线**。格式不符时会返回未知或错误，不伪报成功。网站可能要求人机验证或拒绝自动化浏览器；无账号密码自动登录、无验证码绕过。Windows 上已测试；Linux 部署示例尚未在实际 Linux 服务器运行验证。
+2026-10-12 已在 Windows 使用真实账号验证运气签到：响应包含 `award`、`new_balance`、`multiplier`，账户从 `/api/portal/me` 的 `user` 读取；签到后余额、当天日历和本地记录一致。普通签到、重复签到的真实 HTTP 响应、每日调度、登录有效期和跨午夜边界仍需实测。格式不符时返回未知或错误。网站可能要求人机验证或拒绝自动化浏览器；目目不自动输入账号密码或绕过验证码。Linux 部署助手尚未在实际 Linux 服务器运行验证。

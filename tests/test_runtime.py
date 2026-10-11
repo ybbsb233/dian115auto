@@ -64,10 +64,13 @@ class RuntimeTests(unittest.TestCase):
             self.now += timedelta(days=1)
 
     def test_repeat_cannot_erase_award(self):
+        self.browser.result["multiplier"] = 0
         self.engine.checkin("lucky")
-        self.browser.result = {"status": "already_signed", "points_change": None, "balance": None}
+        self.browser.result = {"status": "already_signed", "points_change": None,
+                               "balance": None, "multiplier": None}
         self.engine.checkin("normal")
         self.assertEqual(self.engine.status()["record"]["points_change"], 0)
+        self.assertEqual(self.engine.status()["record"]["multiplier"], 0)
 
     def test_failure_preserves_prior_success(self):
         self.engine.checkin()

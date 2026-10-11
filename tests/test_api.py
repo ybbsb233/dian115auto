@@ -27,7 +27,8 @@ class ApiTests(unittest.TestCase):
                 owner.calls.append((operation, kwargs))
                 if operation == "account":
                     return {"status": "ok", "account_id": "1", "balance": 15}
-                return {"status": "success", "points_change": -5, "balance": 15, "mode": kwargs["mode"]}
+                return {"status": "success", "points_change": -5, "balance": 15,
+                        "mode": kwargs["mode"], "multiplier": -1}
 
         self.engine = Engine(cfg, "1", Browser(), lambda: datetime(2026, 10, 11, 10, tzinfo=cfg.zone))
         self.server = make_server(self.engine)
@@ -63,6 +64,9 @@ class ApiTests(unittest.TestCase):
         status, body = self.request("/checkin", {"mode": "lucky"})
         self.assertEqual(status, 200)
         self.assertEqual(body["points_change"], -5)
+        self.assertEqual(body["multiplier"], -1)
+        self.assertEqual(self.request("/checkin/status")[1]["record"]["multiplier"], -1)
+        self.assertEqual(self.request("/checkin/history")[1]["items"][0]["multiplier"], -1)
         self.assertEqual(self.request("/checkin/status")[1]["status"], "signed")
         self.assertEqual(self.request("/checkin/history")[1]["total"], 1)
         self.assertEqual(len(self.calls), 1)

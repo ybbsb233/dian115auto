@@ -1,8 +1,27 @@
 import unittest
-from checkin import CheckinError, LoginRequired, interpret_response
+from checkin import CheckinError, LoginRequired, interpret_response, parse_response
 
 
 class ResultTests(unittest.TestCase):
+    def test_signed_multiplier_including_zero_and_loss(self):
+        for multiplier in (1, 3.5, 0, -1):
+            with self.subTest(multiplier=multiplier):
+                result = parse_response(200, {"award": 4 * multiplier, "new_balance": 175,
+                                             "mode": "lucky", "multiplier": multiplier})
+                self.assertEqual(result["multiplier"], multiplier)
+                self.assertEqual(result["status"], "success")
+
+    def test_missing_or_invalid_multiplier_does_not_invent_value(self):
+        for multiplier in (None, True, "3", float("nan"), float("inf"), [], {}):
+            with self.subTest(multiplier=multiplier):
+                result = parse_response(200, {"award": 4, "new_balance": 179, "multiplier": multiplier})
+                self.assertIsNone(result["multiplier"])
+                self.assertEqual(result["status"], "success")
+        self.assertIsNone(parse_response(200, {"award": 4, "new_balance": 179})["multiplier"])
+
+    def test_already_signed_does_not_claim_original_multiplier(self):
+        self.assertIsNone(parse_response(409, {"code": "already_signed", "multiplier": 5})["multiplier"])
+
     def test_success_requires_award_and_balance(self):
         self.assertIn("+5", interpret_response(200, {"award": 5, "new_balance": 20}))
 
