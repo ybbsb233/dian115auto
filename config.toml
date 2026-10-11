@@ -1,0 +1,26 @@
+# 路径相对于此配置文件。Python 3.11+。
+[schedule]
+enabled = true
+time = "09:00"
+timezone = "Asia/Shanghai" # 按北京时间归档；网站日界线尚待账号实测
+catch_up = true           # 当天错过时间，启动/恢复后补执行
+retries = 2               # 初次之外的重试次数，仅重试结果未知/浏览器忙
+retry_seconds = 60
+
+[checkin]
+mode = "normal"          # normal 普通签到；lucky 运气签到（可能扣分）
+
+[browser]
+channel = "chromium"     # chromium / msedge / chrome；登录和服务使用同一浏览器
+profile = ".state/browser" # 专用登录资料目录，请勿上传
+headless = true           # 遇到浏览器验证失败时改为 false，在桌面环境完成验证
+timeout = 45
+login_timeout = 300
+
+[storage]
+directory = "data"
+
+[api]
+host = "127.0.0.1"
+port = 8080
+key_env = "DIAN115_API_KEY" # 设置后所有接口要求 Authorization: Bearer <密钥>
