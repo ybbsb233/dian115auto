@@ -87,6 +87,6 @@ API 密钥可在 `.env` 中设置 `DIAN115_API_KEY`；也兼容 `~/.config/dian1
 
 ## 验证范围
 
-2026-10-13 已在 Debian 13 x86-64 服务器验证全新凭证自动登录、Chromium + Xvfb、systemd 用户服务和正式调度运气签到。日志、HTTP 状态/历史、网站余额、日历和本地记录一致。修复了真实 systemd 对 WorkingDirectory 路径引号的兼容问题。其他网络和服务器环境仍可能遇到网站验证，长期登录有效期和跨日行为仍需观察。
+已在 Debian 13 x86-64 验证自动登录、Chromium + Xvfb、systemd 用户服务、定时运气签到和 HTTP 查询。其他服务器环境可能遇到网站验证；长期登录有效期和跨日运行仍需观察。
 
 依赖安装参考 [Playwright 浏览器文档](https://playwright.dev/python/docs/browsers)；Linux 有界面运行使用 Xvfb 的方式参考 [Playwright CI 文档](https://playwright.dev/python/docs/ci)。

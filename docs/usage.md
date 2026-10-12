@@ -38,28 +38,7 @@ python -m venv .venv
 
 ## Linux
 
-推荐使用 [Linux 部署助手与完整指南](linux.md)，自动安装依赖并生成当前用户的后台服务。下面保留手动安装方式。
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m playwright install --with-deps chromium
-.venv/bin/python checkin.py login
-.venv/bin/python checkin.py serve
-```
-
-安装系统浏览器依赖可能需要管理员权限。手动登录需要 Linux 图形桌面或远程桌面。推荐使用部署助手安装 Xvfb，再从 .env 自动登录；登录和后台服务均可在纯 SSH 中运行，详见 Linux 部署指南。网站要求人工验证时仍需可操作的桌面。不要假定 Windows 浏览器资料可以直接迁移到 Linux。
-
-`deploy/dian115.service` 提供 systemd 示例：按实际安装路径、Linux 用户修改后再安装。它负责开机启动和异常重启，每日时间由程序管理。示例只提供文件，不会自动安装或启动服务。
-
-```bash
-sudo cp deploy/dian115.service /etc/systemd/system/dian115.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now dian115
-sudo systemctl status dian115
-```
-
-示例中的 `dian115` 用户必须已存在，能读写项目的数据和浏览器目录，且 Chromium 应由同一用户安装。重新登录前 `sudo systemctl stop dian115`；登录后再启动。
+安装、自动登录和后台服务管理见 [Linux 部署指南](linux.md)。统一使用 deploy/linux.py，无需手动编写 systemd 服务文件。
 
 ## 配置与调度
 
@@ -97,7 +76,7 @@ key_env = "DIAN115_API_KEY"
 - `retries=2` 指初次之外最多再试两次，只重试结果未知或浏览器忙；登录失效、明确拒绝不会重试。间隔从上一次操作结束计算。
 - 调度次数保存在本地，重启不会重置当天的重试预算。登录失效修复后，可通过 `POST /checkin` 手动补签；次日调度自动恢复。
 - 关闭 `schedule.enabled` 只关闭定时签到，API 仍可用。
-- 目前假定网站按北京时间划分签到日期，尚需账号实测。跨越午夜且无法确认归属日期的响应不会标记任何一天为已签到。
+- 签到日期按配置时区归档，默认北京时间。跨越午夜且无法确认归属日期的响应不会标记任何一天为已签到。
 - 浏览器锁同时约束 CLI、API 和调度；服务请求并发时返回 `busy`，不并行操作账号。
 
 ## HTTP API
@@ -168,8 +147,6 @@ $env:DIAN115_API_KEY = '请替换为至少24字符的随机密钥'
 
 ## 数据与日志
 
-实测时可在 `.env` 设置 `DIAN115_CAPTURE_DIRECTORY=/绝对路径/data/signin-responses`，让正式签到流程在解析前保存网站完整 JSON（不包含 Cookie、请求头或登录响应）。目录应放在已忽略的数据目录内。采集写入失败会记日志，不推翻网站已确认的签到结果；平时留空即可。
-
 ```text
 .state/browser/               浏览器资料及 session-cookies.json（敏感）
 data/account.json             最近 login 确认的账号及资料目录
@@ -191,4 +168,4 @@ Cookie 等同于登录凭据，请勿上传或分享。项目 `.gitignore` 排�
 
 测试覆盖浏览器按钮、请求响应、0/负分、重复签到、本地记录隔离、并发、调度重试、HTTP 鉴权、单次模式无记录/无日志及会话 Cookie 恢复。接口测试使用模拟网站响应，不会操作真实账号。
 
-2026-10-12 已在 Windows 使用真实账号验证运气签到：响应包含 `award`、`new_balance`、`multiplier`，账户从 `/api/portal/me` 的 `user` 读取；签到后余额、当天日历和本地记录一致。2026-10-13 已在 Debian 13 服务器验证正式调度运气签到及 HTTP 查询；普通签到、重复签到的真实 HTTP 响应、登录有效期和跨午夜边界仍需实测。格式不符时返回未知或错误。网站可能要求人机验证或拒绝自动化浏览器；项目支持从 .env 自动填写账号密码，不绕过验证码。Linux 的 Xvfb 与 systemd 用户服务已在真实服务器验证。
+已验证 Windows 和 Debian 13 的运气签到、Linux 自动登录及定时运行，以及 HTTP 状态和历史查询。普通签到、长期登录有效期和跨午夜边界仍需进一步验证。网站要求人工验证时需在浏览器中处理。

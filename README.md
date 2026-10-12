@@ -47,7 +47,7 @@ DIAN115_PASSWORD=你的密码
 .\.venv\Scripts\python.exe checkin.py serve
 ```
 
-默认每天北京时间 **09:00 普通签到**，错过当天时间会在启动时补执行。保持程序运行、电脑开机且联网，按 `Ctrl+C` 停止。关闭终端或电脑后不会继续签到；Windows 开机自启需要自行配置，Linux 可使用随附的 systemd 示例。
+默认每天北京时间 **09:00 普通签到**，错过当天时间会在启动时补执行。保持程序运行、电脑开机且联网，按 `Ctrl+C` 停止。关闭终端或电脑后不会继续签到；Windows 开机自启需要自行配置，Linux 可使用安装助手配置后台服务。
 
 ## 改时间或签到方式
 
@@ -73,12 +73,6 @@ mode = "normal" # normal 普通签到；lucky 运气签到
 | `login` | 自动或手动登录，保存账号与浏览器资料 |
 | `run` | 立即尝试一次签到，结果输出到终端 |
 | `serve` | 持续运行每日调度、记录日志，并提供本机 API |
-
-个人设置可保存在 `config.local.toml`，该文件不会上传到 GitHub。每次使用它时，三个命令都要加同一参数，例如：
-
-```powershell
-.\.venv\Scripts\python.exe checkin.py serve --config config.local.toml
-```
 
 ## 常见问题
 
@@ -106,7 +100,7 @@ sudo loginctl enable-linger "$USER"
 python3 deploy/linux.py start           # 启动每日签到，错过时间可能立即补签
 ```
 
-助手会安装 Xvfb 虚拟显示器，登录和服务都能在纯 SSH 中以有界面模式自动运行浏览器，无需完整桌面。网站要求人工验证时仍需远程桌面或 X11 转发。2026-10-13 已在 Debian 13 服务器验证自动登录、Xvfb、systemd 服务和到点运气签到。
+助手会安装 Xvfb 虚拟显示器，登录和服务都能在纯 SSH 中以有界面模式自动运行浏览器，无需完整桌面。网站要求人工验证时仍需远程桌面或 X11 转发。
 
 ## 更多说明
 
@@ -114,7 +108,7 @@ python3 deploy/linux.py start           # 启动每日签到，错过时间可�
 
 `.state/` 保存浏览器登录凭据，`data/` 保存账号信息与运行记录，均已被 Git 忽略。**不要上传或分享这些目录**；使用自定义目录时也应加入 `.gitignore`。
 
-网站变化、人机验证和登录过期可能影响运行。2026-10-12 已在 Windows 实测运气签到，确认奖励、余额、倍率及当天日历记录；2026-10-13 已在 Linux 实测每日调度触发运气签到；普通签到和长期登录有效期仍需观察。
+已验证 Windows 和 Debian 13 上的运气签到，以及 Linux 的自动登录和定时运行。网站变化、人机验证和登录过期可能影响运行；普通签到和长期运行仍需进一步观察。
 
 ## 项目结构与测试
 
@@ -126,7 +120,7 @@ runtime.py          每日调度与签到记录管理
 storage.py          本地 JSON 存储
 api.py              HTTP API
 config.toml         通用默认配置
-deploy/             Linux 服务示例
+deploy/linux.py     Linux 安装和服务管理
 tests/              自动化测试
 docs/usage.md       详细使用说明
 ```

@@ -1,9 +1,6 @@
 """网站浏览器适配层：通过原有页面操作并捕获响应，不自行绕过登录验证。"""
 import math
 import os
-from datetime import datetime, timezone
-from pathlib import Path
-import logging
 import time
 from urllib.parse import urlsplit
 from playwright.sync_api import Error as PlaywrightError
@@ -109,17 +106,6 @@ def perform_checkin(page, timeout_seconds, mode="normal", structured=False):
         button.click()
     response = pending.value
     data = response_data(response)
-    # 可选本地诊断：保留网站完整签到 JSON，不记录 Cookie、请求头或登录响应。
-    capture_dir = os.environ.get("DIAN115_CAPTURE_DIRECTORY")
-    if capture_dir:
-        from storage import atomic_json
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
-        try:
-            atomic_json(Path(capture_dir) / (stamp + ".json"), {
-                "http_status": response.status, "requested_mode": mode, "response": data,
-            })
-        except (OSError, ValueError):
-            logging.getLogger("dian115.service").error("签到原始响应采集保存失败，请检查诊断目录")
     if not structured:
         return interpret_response(response.status, data)
     result = parse_response(response.status, data)
