@@ -58,7 +58,7 @@ class LinuxServiceTests(unittest.TestCase):
     def test_service_quotes_paths_and_does_not_embed_user_identity(self):
         text = render_unit(Path('/home/alice/my project%$'), Path('/home/alice/config.toml'),
                            Path('/home/alice/.config/dian115auto/api.env'))
-        self.assertIn('WorkingDirectory="/home/alice/my project%%$"', text)
+        self.assertIn('WorkingDirectory=/home/alice/my project%%$', text)
         self.assertIn('"/home/alice/my project%%$$/.venv/bin/python"', text)
         self.assertIn('"serve" "--config" "/home/alice/config.toml"', text)
         self.assertIn('WantedBy=default.target', text)

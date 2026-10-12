@@ -10,6 +10,18 @@ from storage import atomic_json
 
 
 class BrowserFlowTests(unittest.TestCase):
+    def test_optional_capture_preserves_full_website_response(self):
+        payload = {'award': 4, 'new_balance': 179, 'mode': 'lucky',
+                   'multiplier': 1, 'base': 4, 'streak': 2}
+        with TemporaryDirectory() as folder, patch.dict(os.environ, {'DIAN115_CAPTURE_DIRECTORY': folder}):
+            result = self.run_fixture(200, payload, mode='lucky', structured=True)
+            files = list(Path(folder).glob('*.json'))
+            self.assertEqual(len(files), 1)
+            saved = json.loads(files[0].read_text(encoding='utf-8'))
+            self.assertEqual(saved['response'], payload)
+            self.assertEqual(saved['requested_mode'], 'lucky')
+            self.assertEqual(result['multiplier'], 1)
+
     def test_automatic_login_submits_env_credentials_and_confirms_account(self):
         context = self.browser.new_context()
         self.addCleanup(context.close)

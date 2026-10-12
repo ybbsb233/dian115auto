@@ -24,6 +24,14 @@ def unit_quote(value, exec_arg=False):
     return '"' + value + '"'
 
 
+def unit_path(value):
+    """WorkingDirectory 等单路径指令不使用 ExecStart 的参数引号。"""
+    value = value.as_posix() if isinstance(value, Path) else str(value)
+    if any(char in value for char in ("\n", "\r", "\x00")):
+        raise ValueError("服务路径不能含换行或 NUL")
+    return value.replace("%", "%%")
+
+
 def render_unit(root, config, environment_file, desktop=None, virtual_display=None):
     root, config = Path(root), Path(config)
     args = [root / ".venv/bin/python", root / "checkin.py", "serve", "--config", config]
@@ -37,9 +45,9 @@ def render_unit(root, config, environment_file, desktop=None, virtual_display=No
     return (
         "[Unit]\nDescription=Dian115 daily check-in\n\n"
         "[Service]\nType=simple\n"
-        f"WorkingDirectory={unit_quote(root)}\nExecStart={command}\n"
+        f"WorkingDirectory={unit_path(root)}\nExecStart={command}\n"
         "Environment=PYTHONUNBUFFERED=1\n"
-        f"EnvironmentFile=-{unit_quote(environment_file)}\n"
+        f"EnvironmentFile=-{unit_path(environment_file)}\n"
         + desktop_lines +
         "Restart=on-failure\nRestartSec=30\nTimeoutStopSec=240\nUMask=0077\n\n"
         "[Install]\nWantedBy=default.target\n"

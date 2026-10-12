@@ -14,7 +14,7 @@ Python 3.11+，支持 Windows / Linux。通过网站正常浏览器流程工作�
 
 ## Windows 快速开始
 
-在目目目录执行：
+在项目目录执行：
 
 ```powershell
 python -m venv .venv
@@ -59,7 +59,7 @@ sudo systemctl enable --now dian115
 sudo systemctl status dian115
 ```
 
-示例中的 `dian115` 用户必须已存在，能读写目目的数据和浏览器目录，且 Chromium 应由同一用户安装。重新登录前 `sudo systemctl stop dian115`；登录后再启动。
+示例中的 `dian115` 用户必须已存在，能读写项目的数据和浏览器目录，且 Chromium 应由同一用户安装。重新登录前 `sudo systemctl stop dian115`；登录后再启动。
 
 ## 配置与调度
 
@@ -102,7 +102,7 @@ key_env = "DIAN115_API_KEY"
 
 ## HTTP API
 
-默认地址 `http://127.0.0.1:8080`。下面是**本目目自己的返回格式**，不是网站原始响应。
+默认地址 `http://127.0.0.1:8080`。下面是**本项目自己的返回格式**，不是网站原始响应。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
@@ -168,6 +168,8 @@ $env:DIAN115_API_KEY = '请替换为至少24字符的随机密钥'
 
 ## 数据与日志
 
+实测时可在 `.env` 设置 `DIAN115_CAPTURE_DIRECTORY=/绝对路径/data/signin-responses`，让正式签到流程在解析前保存网站完整 JSON（不包含 Cookie、请求头或登录响应）。目录应放在已忽略的数据目录内。采集写入失败会记日志，不推翻网站已确认的签到结果；平时留空即可。
+
 ```text
 .state/browser/               浏览器资料及 session-cookies.json（敏感）
 data/account.json             最近 login 确认的账号及资料目录
@@ -175,7 +177,7 @@ data/checkins/<账号哈希>/      YYYY-MM-DD.json 确认记录、schedule.json 
 data/logs/service.log          常驻服务日志，自动轮转
 ```
 
-Cookie 等同于登录凭据，请勿上传或分享。目目 `.gitignore` 排除默认的浏览器资料、数据、日志和本地配置；自定义其他目录时自行排除。Linux 下敏感 JSON 通过临时文件以仅当前用户可读写的权限创建，再原子替换。
+Cookie 等同于登录凭据，请勿上传或分享。项目 `.gitignore` 排除默认的浏览器资料、数据、日志和本地配置；自定义其他目录时自行排除。Linux 下敏感 JSON 通过临时文件以仅当前用户可读写的权限创建，再原子替换。
 
 单次运行不保存签到记录，之后服务仍可能尝试一次，由网站的“今日已签到”响应补齐记录。浏览器与数据目录需要保留；换目录后本地无记录只能表示未知。日志仅由 `serve` 创建，`run` 和 `login` 不创建日志。
 
@@ -189,4 +191,4 @@ Cookie 等同于登录凭据，请勿上传或分享。目目 `.gitignore` 排�
 
 测试覆盖浏览器按钮、请求响应、0/负分、重复签到、本地记录隔离、并发、调度重试、HTTP 鉴权、单次模式无记录/无日志及会话 Cookie 恢复。接口测试使用模拟网站响应，不会操作真实账号。
 
-2026-10-12 已在 Windows 使用真实账号验证运气签到：响应包含 `award`、`new_balance`、`multiplier`，账户从 `/api/portal/me` 的 `user` 读取；签到后余额、当天日历和本地记录一致。普通签到、重复签到的真实 HTTP 响应、每日调度、登录有效期和跨午夜边界仍需实测。格式不符时返回未知或错误。网站可能要求人机验证或拒绝自动化浏览器；目目不自动输入账号密码或绕过验证码。Linux 部署助手尚未在实际 Linux 服务器运行验证。
+2026-10-12 已在 Windows 使用真实账号验证运气签到：响应包含 `award`、`new_balance`、`multiplier`，账户从 `/api/portal/me` 的 `user` 读取；签到后余额、当天日历和本地记录一致。2026-10-13 已在 Debian 13 服务器验证正式调度运气签到及 HTTP 查询；普通签到、重复签到的真实 HTTP 响应、登录有效期和跨午夜边界仍需实测。格式不符时返回未知或错误。网站可能要求人机验证或拒绝自动化浏览器；项目支持从 .env 自动填写账号密码，不绕过验证码。Linux 的 Xvfb 与 systemd 用户服务已在真实服务器验证。
